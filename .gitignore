@@ -1,0 +1,61 @@
+############################
+# IntelliJ IDEA
+############################
+.idea/
+*.iml
+out/
+
+############################
+# Java / Spring Boot
+############################
+*.class
+*.log
+*.tmp
+
+############################
+# Maven
+############################
+target/
+.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+############################
+# OS-specific
+############################
+.DS_Store
+Thumbs.db
+
+############################
+# Logs
+############################
+logs/
+*/logs/
+
+############################
+# Docker
+############################
+# Ignore local override files
+**/docker-compose.override.yml
+**/docker-compose.local.yml
+
+############################
+# Infra data (Kafka, Zookeeper, Postgres)
+############################
+infra/kafka/data/
+infra/kafka/logs/
+infra/zookeeper/data/
+infra/zookeeper/logs/
+infra/postgres/data/
+
+############################
+# Prometheus / Grafana data
+############################
+infra/prometheus/data/
+infra/grafana/data/
+
+############################
+# Environment files
+############################
+.env
+*.env
+.env.*

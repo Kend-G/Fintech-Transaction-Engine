@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: fintech-ledger-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fintech
+    username: fintech_user
+    password: fintech_pass
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+
+  kafka:
+    bootstrap-servers: kafka:9092
+    consumer:
+      group-id: ledger-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+server:
+  port: 8082
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  metrics:
+    tags:
+      application: fintech-ledger-service
