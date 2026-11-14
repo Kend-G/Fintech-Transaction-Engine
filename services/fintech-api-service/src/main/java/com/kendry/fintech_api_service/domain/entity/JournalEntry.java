@@ -40,8 +40,7 @@ public class JournalEntry {
 
 
     @PrePersist
-    void prePrePersist()
-    {
+    void prePersist() {
         this.createdAt = Instant.now();
     }
 }

@@ -1,6 +1,7 @@
 package com.kendry.fintech_api_service.services;
 
 import com.kendry.fintech_api_service.domain.entity.Balance;
+import com.kendry.fintech_api_service.exception.AccountNotFoundException;
 import com.kendry.fintech_api_service.repository.BalanceRepository;
 import org.springframework.stereotype.Service;
 
@@ -12,10 +13,8 @@ public class BalanceService {
         this.balanceRepository = balanceRepository;
     }
 
-    public Balance getBalance(Long accountId){
-
-        return balanceRepository.findById((accountId))
-                .orElse(new Balance(accountId, null, null));
-
+    public Balance getBalance(Long accountId) {
+        return balanceRepository.findById(accountId)
+                .orElseThrow(() -> new AccountNotFoundException(accountId));
     }
 }

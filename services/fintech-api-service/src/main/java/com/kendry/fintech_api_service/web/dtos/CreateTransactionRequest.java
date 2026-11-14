@@ -12,7 +12,7 @@ public record CreateTransactionRequest(
         @NotNull(message = "sourceAccountID is required")
         Long sourceAccountId,
 
-        @NotNull(message = "TargetACountId is required")
+        @NotNull(message = "TargetAccountId is required")
         Long targetAccountId,
 
         @NotNull(message = "amount is required")

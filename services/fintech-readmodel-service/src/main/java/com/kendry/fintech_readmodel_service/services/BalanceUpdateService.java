@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -30,26 +31,26 @@ public class BalanceUpdateService {
     }
 
     @KafkaListener(topics = "transaction.completed", groupId = "readmodel-service")
+    @Transactional
     public void updateBalance(Long transactionId) {
-
         List<JournalEntry> entries = journalEntryRepository.findByTransactionId(transactionId);
 
         for (JournalEntry entry : entries) {
-
-            Balance balance = balanceRepository.findById((entry.getAccountId()))
+            Balance balance = balanceRepository.findById(entry.getAccountId())
                     .orElse(new Balance(entry.getAccountId(), BigDecimal.ZERO, null));
 
-            if(entry.getDirection() == EntryDirection.DEBIT){
-                balance.setCurrentBalance(balance.getCurrentBalance().subtract(entry.getAmount()));
+            BigDecimal currentBalance = balance.getCurrentBalance() != null
+                    ? balance.getCurrentBalance()
+                    : BigDecimal.ZERO;
 
+            if (entry.getDirection() == EntryDirection.DEBIT) {
+                balance.setCurrentBalance(currentBalance.subtract(entry.getAmount()));
+            } else {
+                balance.setCurrentBalance(currentBalance.add(entry.getAmount()));
             }
-            else{
-                balance.setCurrentBalance(balance.getCurrentBalance().add(entry.getAmount()));
-            }
-         balanceRepository.save(balance);
+            balanceRepository.save(balance);
         }
 
-        log.info("update balances for completes transaction {}", "transactionId");
-
+        log.info("Updated balances for completed transaction {}", transactionId);
     }
 }

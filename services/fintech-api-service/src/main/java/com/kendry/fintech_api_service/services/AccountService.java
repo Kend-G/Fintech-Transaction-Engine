@@ -6,6 +6,7 @@ import com.kendry.fintech_api_service.exception.AccountNotFoundException;
 import com.kendry.fintech_api_service.repository.AccountRepository;
 import com.kendry.fintech_api_service.web.dtos.CreateAccountRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AccountService {
@@ -15,6 +16,7 @@ public class AccountService {
         this.accountRepository = accountRepository;
     }
 
+    @Transactional
     public Account createAccount(CreateAccountRequest createAccountRequest) {
         Account account = Account.builder()
                 .ownerId(createAccountRequest.ownerId())
