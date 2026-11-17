@@ -3,12 +3,12 @@ package com.kendry.fintech_readmodel_service.services;
 import com.kendry.fintech_readmodel_service.domain.entities.Balance;
 import com.kendry.fintech_readmodel_service.domain.entities.JournalEntry;
 import com.kendry.fintech_readmodel_service.domain.enums.EntryDirection;
-import com.kendry.fintech_readmodel_service.events.TransactionCompletedEvent;
 import com.kendry.fintech_readmodel_service.repository.BalanceRepository;
 import com.kendry.fintech_readmodel_service.repository.JournalEntryRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,17 +22,28 @@ public class BalanceUpdateService {
 
     private final BalanceRepository balanceRepository;
     private final JournalEntryRepository journalEntryRepository;
+    private final IdempotencyChecker idempotencyChecker;
 
 
     public BalanceUpdateService(BalanceRepository balanceRepository,
-                                JournalEntryRepository journalEntryRepository) {
+                                JournalEntryRepository journalEntryRepository,
+                                IdempotencyChecker idempotencyChecker) {
         this.balanceRepository = balanceRepository;
         this.journalEntryRepository = journalEntryRepository;
+        this.idempotencyChecker = idempotencyChecker;
     }
 
     @KafkaListener(topics = "transaction.completed", groupId = "readmodel-service")
     @Transactional
-    public void updateBalance(Long transactionId) {
+    public void updateBalance(Long transactionId, Acknowledgment ack) {
+        String eventId = transactionId.toString();
+
+        if (idempotencyChecker.isAlreadyProcessed(eventId, "transaction.completed")) {
+            log.warn("Balance for transaction {} already updated, skipping", transactionId);
+            ack.acknowledge();
+            return;
+        }
+
         List<JournalEntry> entries = journalEntryRepository.findByTransactionId(transactionId);
 
         for (JournalEntry entry : entries) {
@@ -52,5 +63,6 @@ public class BalanceUpdateService {
         }
 
         log.info("Updated balances for completed transaction {}", transactionId);
+        ack.acknowledge();
     }
 }

@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,24 +23,27 @@ public class LedgerService {
 
     private final JournalEntryRepository journalEntryRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final IdempotencyChecker idempotencyChecker;
 
     public LedgerService(JournalEntryRepository journalEntryRepository,
-                         KafkaTemplate<String, Object> kafkaTemplate) {
+                         KafkaTemplate<String, Object> kafkaTemplate,
+                         IdempotencyChecker idempotencyChecker) {
         this.journalEntryRepository = journalEntryRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.idempotencyChecker = idempotencyChecker;
     }
 
     @KafkaListener(topics = "transaction.requested", groupId = "ledger-service")
     @Transactional
-    public void processTransaction(TransactionRequestedEvent event) {
-        try {
-            // Idempotency check - skip if already processed
-            long existingCount = journalEntryRepository.countByTransactionId(event.transactionId());
-            if (existingCount > 0) {
-                log.warn("Transaction {} already processed, skipping", event.transactionId());
-                return;
-            }
+    public void processTransaction(TransactionRequestedEvent event, Acknowledgment ack) {
+        String eventId = event.idempotencyKey() != null ? event.idempotencyKey() : event.transactionId().toString();
 
+        if (idempotencyChecker.isAlreadyProcessed(eventId, "transaction.requested")) {
+            ack.acknowledge();
+            return;
+        }
+
+        try {
             // Creating a debit entry
             JournalEntry debit = JournalEntry.builder()
                     .transactionId(event.transactionId())
@@ -64,6 +68,8 @@ public class LedgerService {
             // Publishing completed event
             kafkaTemplate.send("transaction.completed", event.transactionId())
                     .get(10, TimeUnit.SECONDS);
+
+            ack.acknowledge();
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             log.error("Failed to send completed event for transaction {}", event.transactionId(), e);
             try {

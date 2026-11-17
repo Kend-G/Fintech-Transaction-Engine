@@ -51,6 +51,23 @@ services:
       - fintech-net
 
   # -----------------------------
+  # Kafka Topics Init (DLQ topics)
+  # -----------------------------
+  kafka-topics-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: fintech_kafka_topics_init
+    depends_on:
+      - kafka
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transaction.requested.dlq --partitions 1 --replication-factor 1 --config retention.ms=2592000000 &&
+      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transaction.completed.dlq --partitions 1 --replication-factor 1 --config retention.ms=2592000000 &&
+      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic transaction.failed.dlq --partitions 1 --replication-factor 1 --config retention.ms=2592000000 &&
+      echo "DLQ topics created successfully"
+    networks:
+      - fintech-net
+
+  # -----------------------------
   # API Service
   # -----------------------------
   api-service:
@@ -61,6 +78,7 @@ services:
     depends_on:
       - postgres
       - kafka
+      - kafka-topics-init
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fintech
       SPRING_DATASOURCE_USERNAME: fintech_user
@@ -82,6 +100,7 @@ services:
     depends_on:
       - postgres
       - kafka
+      - kafka-topics-init
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fintech
       SPRING_DATASOURCE_USERNAME: fintech_user
@@ -103,6 +122,7 @@ services:
     depends_on:
       - postgres
       - kafka
+      - kafka-topics-init
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fintech
       SPRING_DATASOURCE_USERNAME: fintech_user
